@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
-	
-	  <!-- these are the arguments you can pass this launch file, for example paused:=true -->
+
+  <!-- Some useful arguments that can be passed -->
   <arg name="paused" default="false"/>
   <arg name="use_sim_time" default="true"/>
   <arg name="extra_gazebo_args" default=""/>
@@ -19,6 +19,7 @@
   <arg name="respawn_gazebo" default="false"/>
   <arg name="use_clock_frequency" default="false"/>
   <arg name="pub_clock_frequency" default="100"/>
+  <arg name="robot_model" default="$(find assignment2)/urdf/robot.xacro" />
 
   <!-- set use_sim_time flag -->
   <param name="/use_sim_time" value="$(arg use_sim_time)"/>
@@ -37,15 +38,59 @@
   <group if="$(arg use_clock_frequency)">
     <param name="gazebo/pub_clock_frequency" value="$(arg pub_clock_frequency)" />
   </group>
-  <node name="gazebo" pkg="gazebo_ros" type="$(arg script_type)" respawn="$(arg respawn_gazebo)" output="screen"
+  <node name="gazebo" pkg="gazebo_ros" type="$(arg script_type)"
+    respawn="$(arg respawn_gazebo)" output="screen"
 	args="$(arg command_arg1) $(arg command_arg2) $(arg command_arg3) -e $(arg physics) $(arg extra_gazebo_args) $(arg world_name)" />
-	
+
   <!-- start gazebo client -->
   <group if="$(arg gui)">
-    <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" respawn="false" output="screen"/>
+    <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" respawn="false"
+      output="screen"/>
   </group>
-	
-	
-   <node name="marker_server" pkg="assignment2" type="marker_server" />
+
+  <node name="marker_server" pkg="assignment2" type="marker_server"/>
+
+  <!-- Save robot .xacro to param server -->
+  <param name="robot_description"
+	 command="$(find xacro)/xacro $(arg robot_model)" />
+
+  <!-- Start Rviz -->
+  <param name="use_gui" value="True"/>
+  <node name="joint_state_publisher" pkg="joint_state_publisher"
+    type="joint_state_publisher">
+    <remap from="/joint_states" to="/Giskard/joint_states"/>
+  </node>
+  <node name="robot_state_publisher" pkg="robot_state_publisher"
+    type="robot_state_publisher"
+    respawn="false" output="screen">
+    <remap from="/joint_states" to="/Giskard/joint_states"/>
+  </node>
+  <node name="rviz" pkg="rviz" type="rviz"
+    args="-d $(find assignment2)/config/config.rviz" />
+
+  <!-- Service call to gazebo_ros to spawn robot -->
+  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
+    respawn="false" output="screen"
+    args="-urdf -model Giskard -param robot_description -x -6.0 -y 11.0 -z 1 -Y 3.14"/>
+
+  <!-- Start the joint controllers -->
+  <include file="$(find assignment2)/launch/robot_control.launch"/>
+
+  <!-- Start the ArUco node -->
+  <node name="marker_publisher" pkg="aruco_ros" type="marker_publisher"
+    output="log">
+    <remap from="/image" to="/Giskard/rgb_camera/image_raw"/>
+  </node>
+
+  <!-- Start the gmapping node -->
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+    <remap from="scan" to="Giskard/laser/scan"/>
+    <param name="odom_frame" value="odom"/>
+    <param name="base_frame" value="link_chassis"/>
+    <param name="map_update_interval" value="1.0"/>
+  </node>
+
+  <!-- Start the move_base node -->
+  <include file="$(find assignment2)/launch/move_base.launch"/>
 
 </launch>

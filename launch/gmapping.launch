@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+    <remap from="scan" to="Giskard/laser/scan"/>
+    <param name="odom_frame" value="odom"/>
+    <param name="base_frame" value="link_chassis"/>
+  </node>
+</launch>
