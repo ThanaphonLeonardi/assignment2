@@ -46,7 +46,7 @@
     </plugin>
   </gazebo>
 
-  <!-- Sensor: gpu laser (hokuyo) -->
+  <!-- Sensor: laser (hokuyo) -->
   <gazebo reference="link_hokuyo">
     <sensor type="ray" name="head_hokuyo_sensor">
       <pose>0 0 0 0 0 0</pose>
